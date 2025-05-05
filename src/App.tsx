@@ -69,8 +69,8 @@ function App() {
   const [calculationResult, setCalculationResult] =
     useState<CalculationResult | null>(null);
 
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
-  const nutritionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nutritionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchFood = async (query: string) => {
     try {
@@ -198,7 +198,9 @@ function App() {
   return (
     <div className="app-container">
       {calculationResult && (
-        <div className="calculation-result">
+        <div
+          className={`calculation-result ${calculationResult ? "fade-in" : "fade-out"}`}
+        >
           <div className="pie-section">{renderPieChart()}</div>
           <div className="nutrition-stack">
             <div className="stack-item stack-insulin">
