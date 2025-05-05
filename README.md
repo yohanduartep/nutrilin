@@ -1,4 +1,4 @@
-# 🥗 (Nutritionall Website](https://yohanduartep.github.io/nutritionall-website)
+# 🥗 Nutritionall Website
 
 A lightweight and interactive nutrition tracker built with **React** and **Vite**, allowing users to search for foods, input custom gram values, and visualize nutrient distribution using charts.
 
