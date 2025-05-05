@@ -1,11 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
+import React, { useState, useEffect, useRef } from "react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface FoodItem {
   id: number;
@@ -22,34 +16,82 @@ interface SelectedFood {
   quantity: number;
 }
 
+interface CalculationResult {
+  insulin_needed: number;
+  energy_kcal: number;
+  protein_g: number;
+  lipid_g: number;
+  carbohydrate_g: number;
+  fiber_g: number;
+  percentages: {
+    carbohydrate: number;
+    protein: number;
+    lipid: number;
+  };
+}
+
 const itemsPerTable = 60;
+const COLORS = ["#e6733b", "#359acc", "#e4a616"];
+
+function QuantityInput({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="quantity-control">
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => {
+          const val = Math.max(1, Number(e.target.value) || 1);
+          onChange(val);
+        }}
+        min="1"
+        disabled={disabled}
+        className="quantity-input"
+      />
+      <span>g</span>
+    </div>
+  );
+}
 
 function App() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [selectedFoods, setSelectedFoods] = useState<Map<number, SelectedFood>>(new Map());
-  const [calculationResult, setCalculationResult] = useState<any>(null);
+  const [selectedFoods, setSelectedFoods] = useState(
+    new Map<number, SelectedFood>(),
+  );
+  const [calculationResult, setCalculationResult] =
+    useState<CalculationResult | null>(null);
+
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const nutritionTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const searchFood = async (query: string) => {
     try {
-      const response = await fetch('https://www.nutritionall.xyz/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("https://www.nutritionall.xyz/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: query,
           categories: [],
           ascending: false,
-          max_results: itemsPerTable
-        })
+          max_results: itemsPerTable,
+        }),
       });
       const data = await response.json();
-      if (!data.items || !Array.isArray(data.items)) {
+      if (!Array.isArray(data.items)) {
         alert("No results returned from the API.");
         return;
       }
       setFoodItems(data.items);
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Search Error:", error);
     }
   };
 
@@ -59,25 +101,30 @@ function App() {
       return;
     }
 
-    const meal = Array.from(selectedFoods.values()).map(({ item, quantity }) => ({
-      food_id: item.id,
-      grams: quantity
-    }));
+    const meal = Array.from(selectedFoods.values()).map(
+      ({ item, quantity }) => ({
+        food_id: item.id,
+        grams: quantity,
+      }),
+    );
 
     try {
-      const response = await fetch('https://www.nutritionall.xyz/api/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          factor_insulin_cho: 10,
-          meal: meal,
-          mode: "carbo"
-        })
-      });
+      const response = await fetch(
+        "https://www.nutritionall.xyz/api/calculate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            factor_insulin_cho: 10,
+            meal,
+            mode: "carbo",
+          }),
+        },
+      );
       const data = await response.json();
       setCalculationResult(data);
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Calculation Error:", error);
     }
   };
 
@@ -101,20 +148,29 @@ function App() {
   };
 
   useEffect(() => {
-    searchFood('');
+    searchFood("");
   }, []);
 
   useEffect(() => {
-    calculateNutrition();
+    if (nutritionTimeout.current) clearTimeout(nutritionTimeout.current);
+    nutritionTimeout.current = setTimeout(() => {
+      calculateNutrition();
+    }, 400);
   }, [selectedFoods]);
 
-  const COLORS = ['#e6733b', '#359acc', '#e4a616'];
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => searchFood(value), 400);
+  };
 
   const renderPieChart = () => {
+    if (!calculationResult) return null;
     const data = [
-      { name: 'Carbs', value: calculationResult.percentages.carbohydrate },
-      { name: 'Protein', value: calculationResult.percentages.protein },
-      { name: 'Fat', value: calculationResult.percentages.lipid }
+      { name: "Carbs", value: calculationResult.percentages.carbohydrate },
+      { name: "Protein", value: calculationResult.percentages.protein },
+      { name: "Fat", value: calculationResult.percentages.lipid },
     ];
 
     return (
@@ -127,11 +183,10 @@ function App() {
             cx="50%"
             cy="50%"
             outerRadius={100}
-            fill="#e6733b"
             label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            {data.map((_, index) => (
+              <Cell key={index} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip formatter={(value: number) => `${value.toFixed(1)}g`} />
@@ -143,48 +198,47 @@ function App() {
   return (
     <div className="app-container">
       {calculationResult && (
-        <div className="calculation-result" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-          <div className="pie-section" style={{ flex: 1, minWidth: '300px' }}>{renderPieChart()}</div>
-          <div className="nutrition-stack" style={{ flex: 1, minWidth: '250px' }}>
+        <div className="calculation-result">
+          <div className="pie-section">{renderPieChart()}</div>
+          <div className="nutrition-stack">
             <div className="stack-item stack-insulin">
               <span>Insulin</span>
-              <span>{(calculationResult.insulin_needed || 0).toFixed(1)}u</span>
+              <span>{calculationResult.insulin_needed.toFixed(1)}u</span>
             </div>
             <div className="stack-item stack-energy">
               <span>Energy</span>
-              <span>{(calculationResult.energy_kcal || 0).toFixed(1)}kcal</span>
+              <span>{calculationResult.energy_kcal.toFixed(1)}kcal</span>
             </div>
             <div className="stack-item stack-carbs">
               <span>Carbs</span>
-              <span>{(calculationResult.carbohydrate_g || 0).toFixed(1)}g</span>
+              <span>{calculationResult.carbohydrate_g.toFixed(1)}g</span>
             </div>
             <div className="stack-item stack-protein">
               <span>Protein</span>
-              <span>{(calculationResult.protein_g || 0).toFixed(1)}g</span>
+              <span>{calculationResult.protein_g.toFixed(1)}g</span>
             </div>
             <div className="stack-item stack-fat">
               <span>Fat</span>
-              <span>{(calculationResult.lipid_g || 0).toFixed(1)}g</span>
+              <span>{calculationResult.lipid_g.toFixed(1)}g</span>
             </div>
             <div className="stack-item stack-fiber">
               <span>Fiber</span>
-              <span>{(calculationResult.fiber_g || 0).toFixed(1)}g</span>
+              <span>{calculationResult.fiber_g.toFixed(1)}g</span>
             </div>
             <div className="selected-foods-list">
               {Array.from(selectedFoods.values()).map(({ item, quantity }) => (
                 <div key={item.id} className="selected-food-item">
                   <span>{item.description}</span>
-                  <div className="quantity-control">
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
-                      min="1"
-                      className="quantity-input"
-                    />
-                    <span>g</span>
-                  </div>
-                  <button onClick={() => toggleFoodSelection(item)} className="remove-button">✕</button>
+                  <QuantityInput
+                    value={quantity}
+                    onChange={(v) => handleQuantityChange(item.id, v)}
+                  />
+                  <button
+                    onClick={() => toggleFoodSelection(item)}
+                    className="remove-button"
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
             </div>
@@ -194,13 +248,13 @@ function App() {
 
       <div className="food-section">
         <div className="search-container">
+          {selectedFoods.size === 0 && (
+            <h1 className="nutrilin-title">Nutrilin</h1>
+          )}
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              searchFood(e.target.value);
-            }}
+            onChange={handleSearchChange}
             placeholder="Search for food..."
             className="search-input"
           />
@@ -211,32 +265,29 @@ function App() {
             {foodItems.map((item) => (
               <div
                 key={item.id}
-                className={`food-card ${selectedFoods.has(item.id) ? 'selected' : ''}`}
+                className={`food-card ${
+                  selectedFoods.has(item.id) ? "selected" : ""
+                }`}
                 onClick={() => toggleFoodSelection(item)}
-                style={{ cursor: 'pointer' }}
               >
                 <div className="food-card-header">
                   <h3>{item.description}</h3>
                 </div>
                 <div className="food-card-content">
                   <div className="nutrition-data">
-                    <p className="energy">{Number(item.energy_kcal).toFixed(0)} kcal</p>
-                    <p>Carbs: {Number(item.carbohydrate_g).toFixed(1)}g</p>
-                    <p>Protein: {Number(item.protein_g).toFixed(1)}g</p>
-                    <p>Fiber: {Number(item.fiber_g).toFixed(1)}g</p>
-                    <p>Fat: {Number(item.lipid_g).toFixed(1)}g</p>
+                    <p className="energy">
+                      {(item.energy_kcal ?? 0).toFixed(0)} kcal
+                    </p>
+                    <p>Carbs: {(item.carbohydrate_g ?? 0).toFixed(1)}g</p>
+                    <p>Protein: {(item.protein_g ?? 0).toFixed(1)}g</p>
+                    <p>Fiber: {(item.fiber_g ?? 0).toFixed(1)}g</p>
+                    <p>Fat: {(item.lipid_g ?? 0).toFixed(1)}g</p>
                   </div>
-                  <div className="quantity-control">
-                    <input
-                      type="number"
-                      value={selectedFoods.get(item.id)?.quantity || 100}
-                      onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
-                      disabled={!selectedFoods.has(item.id)}
-                      min="1"
-                      className="quantity-input"
-                    />
-                    <span>g</span>
-                  </div>
+                  <QuantityInput
+                    value={selectedFoods.get(item.id)?.quantity || 100}
+                    onChange={(v) => handleQuantityChange(item.id, v)}
+                    disabled={!selectedFoods.has(item.id)}
+                  />
                 </div>
               </div>
             ))}
@@ -248,4 +299,3 @@ function App() {
 }
 
 export default App;
-
