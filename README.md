@@ -1,4 +1,4 @@
-# 🥗 Nutritionall Website
+# 🥗 Nutrilin Website
 
 A lightweight and interactive nutrition tracker built with **React** and **Vite**, allowing users to search for foods, input custom gram values, and visualize nutrient distribution using charts.
 
@@ -12,7 +12,7 @@ Use it [here](https://yohanduartep.github.io/nutritionall-website).
 
 - 🔍 Search and select food items
 - ⚖️ Input grams to calculate nutritional values
-- 📊 Visualize macronutrients (carbs, protein, fat, fiber) with charts and **INSULIN NEEDED** for the current food!
+- 📊 Visualize macronutrients (carbs, protein, fat, fiber) with charts and **Insulin needed** for the current food!
 
 ---
 
@@ -29,8 +29,8 @@ Use it [here](https://yohanduartep.github.io/nutritionall-website).
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/nutrition-app.git
-cd nutrition-app
+git clone https://github.com/your-username/nutrilin-app.git
+cd nutrilin-app
 
 # Install dependencies
 npm install
