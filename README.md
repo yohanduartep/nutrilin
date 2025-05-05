@@ -1,4 +1,4 @@
-# 🥗 Nutrilin Website
+# 🥗 Nutrilin
 
 A lightweight and interactive nutrition tracker built with **React** and **Vite**, allowing users to search for foods, input custom gram values, and visualize nutrient distribution using charts.
 
