@@ -4,7 +4,7 @@ A lightweight and interactive nutrition tracker built with **React** and **Vite*
 
 Powered by [Nutritionall API](https://github.com/mariliafernandez/nutritionall), developed by **Marilia Fernandes** — the best. 🌟
 
-Use it [here](https://yohanduartep.github.io/nutritionall-website).
+Use it [here](https://yohanduartep.github.io/nutrilin).
 
 ---
 
